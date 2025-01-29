@@ -2,6 +2,7 @@ const tools = require('./../tools');
 const { authenticate } = require('ldap-authentication');
 const querystring = require('querystring');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 
 class AuthController {
@@ -12,13 +13,13 @@ class AuthController {
 
   globalSecureAction(request, response, next) {
     // Salta il controllo se l'utente sta cercando di accedere alle route di login
-    if (request.path === '/login' || request.path === '/auth/keycloak' || request.path === '/auth/callback') {
+    if (request.path === '/login' || request.path === '/auth/keycloak' || request.path === '/auth/callback' || request.path === 'logout') {
         return next();
     }
 
     // Se non ci sono informazioni nella sessione, forziamo il redirect a Keycloak
     if (!request.session.user && !request.headers.authorization) {
-        return response.redirect('/auth/keycloak');
+        return response.redirect('/login');
     }
 
     // Gestione del caso di modalità "read-only" e altre protezioni
@@ -68,30 +69,27 @@ class AuthController {
   }
 
   logoutAction(req, res) {
-    const actor = req.session.user ? req.session.user.username : 'unknown'; // Aggiungi un controllo nel caso la sessione non esista
-  
-    // Aggiungi un log per verificare la presenza del token prima della rimozione
-    console.log('Token di Keycloak prima del logout:', req.session.user ? req.session.user.token : 'nessun token');
-  
-    // Rimuovere il token di Keycloak dalla sessione
-    if (req.session.user) {
-      delete req.session.user.token;
-    }
-  
-    // Distruggere la sessione
-    req.session.destroy(function (err) {
-      if (err) {
-        console.error('Errore durante la distruzione della sessione:', err);
-        return res.status(500).send('Errore durante il logout');
-      }
-  
-      console.log('Sessione distrutta correttamente');
-      res.clearCookie('connect.sid');  // Se il tuo cookie di sessione si chiama 'connect.sid'
-  
-      // Fare redirect alla pagina di login o alla homepage
-      res.redirect('/login');
+    console.log("ciao");
+    const keycloakLogoutUrl = `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/logout?` +
+        querystring.stringify({
+            client_id: process.env.KEYCLOAK_CLIENT_ID,
+            post_logout_redirect_uri: `${process.env.APP_URL}/login`
+        });
+
+    // Cancella la sessione e il cookie
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Errore durante la distruzione della sessione:', err);
+            return res.status(500).send('Errore durante il logout');
+        }
+
+        res.clearCookie('connect.sid'); // Cancella il cookie della sessione
+        console.log('Sessione distrutta, reindirizzamento a Keycloak per il logout');
+        
+        // Reindirizza a Keycloak per il logout
+        res.redirect(keycloakLogoutUrl);
     });
-  }
+}
   
   
 
@@ -184,34 +182,62 @@ class AuthController {
   
     try {
       // Scambia il codice con il token di accesso
-      const tokenResponse = await axios.post(`${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`, 
+      const tokenResponse = await axios.post(
+        `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
         querystring.stringify({
           client_id: process.env.KEYCLOAK_CLIENT_ID,
           client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
           grant_type: 'authorization_code',
           redirect_uri: `${process.env.APP_URL}/auth/callback`,
           code: code
-        }), 
+        }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
   
-      const { access_token, id_token } = tokenResponse.data;
+      const { access_token } = tokenResponse.data;
   
-      // Decodifica il token per ottenere informazioni sull'utente
-      const userInfo = await axios.get(`${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/userinfo`, {
-        headers: { Authorization: `Bearer ${access_token}` }
-      });
+      // Decodifica il token JWT per ottenere i ruoli
+      const decodedToken = jwt.decode(access_token); 
+      const roles = decodedToken?.realm_access?.roles || [];
   
-      // Verifica i ruoli dell'utente
-      const roles = userInfo.data.realm_access ? userInfo.data.realm_access.roles : [];
+      if (!roles.includes('velero')) {
+        return res.status(403).send(`
+          <html>
+            <head>
+              <title>Accesso Negato</title>
+              <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                .container { max-width: 400px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+                button { background-color: red; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 16px; }
+                button:hover { background-color: darkred; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h2>Accesso Negato</h2>
+                <p>Non hai il ruolo richiesto per accedere all'applicazione.</p>
+                <button onclick="logout()">Logout</button>
+              </div>
+              <script>
+                function logout() {
+                  window.location.href = "${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/logout?client_id=${process.env.KEYCLOAK_CLIENT_ID}&post_logout_redirect_uri=${process.env.APP_URL}/login";
+                }
+              </script>
+            </body>
+          </html>
+        `);
+      }
       
-      // if (!roles.includes('velero')) {
-      //   return res.status(403).send('Accesso negato: l\'utente non ha il ruolo "velero"');
-      // }
   
-      // Se l'utente ha il ruolo 'velero', salva le informazioni nella sessione
+      // Recupera informazioni aggiuntive sull'utente
+      const userInfo = await axios.get(
+        `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/userinfo`,
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      );
+  
+      // Salva l'utente nella sessione
       req.session.user = {
-        isAdmin: roles.includes('admin'), // Puoi aggiungere più logiche per altri ruoli
+        isAdmin: roles.includes('admin'),
         username: userInfo.data.preferred_username,
         email: userInfo.data.email,
         token: access_token
@@ -221,10 +247,11 @@ class AuthController {
       res.redirect('/');
   
     } catch (error) {
-      console.error('Errore durante la callback:', error);
+      console.error('Errore durante la callback:', error.response?.data || error.message);
       res.status(500).send('Errore durante l\'autenticazione con Keycloak');
     }
-  }  
+  }
+  
 
   provaapi(){
     console.log("ciao" , process.env.KEYCLOAK_REALM)

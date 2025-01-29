@@ -100,7 +100,7 @@ app.get('/', (req, res, next) => {
   // Controlla se l'utente è autenticato con Basic Auth
   if (!req.session.user && !req.headers.authorization) {
       // Se non è autenticato e non ci sono credenziali Basic Auth, reindirizza a Keycloak
-      return res.redirect('/auth/keycloak');
+      return res.redirect('/login');
   }
   homeController.homeView(req, res, next);
 });
