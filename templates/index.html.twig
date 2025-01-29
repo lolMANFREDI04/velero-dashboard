@@ -1,0 +1,232 @@
+{% extends "layout.html.twig" %} 
+
+{% block title %} Dashboard {% endblock %} 
+
+{% block body %}
+
+<h1 class="mt-5">Overview</h1>
+<hr/>
+<div class="row text-center">
+    <div class="col-2">
+        <div class="card card-sm">
+             <div class="card-body">
+                <h2 class="card-title mt-4">
+                    <i class="bi bi-floppy2"></i> 
+                    <span class="spinner-grow counter-backups"></span>
+                </h2>
+                <p class="card-text">
+                    <span class="text-muted">Backups</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-2">
+        <div class="card card-sm">
+             <div class="card-body">
+                <h2 class="card-title mt-4">
+                    <i class="bi bi-bootstrap-reboot"></i> 
+                    <span class="spinner-grow counter-restores"></span>
+                </h2>
+                <p class="card-text">
+                    <span class="text-muted">Restores</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-2">
+        <div class="card card-sm">
+             <div class="card-body">
+                <h2 class="card-title mt-4">
+                    <i class="bi bi-calendar"></i> 
+                    <span class="spinner-grow counter-schedules"></span>
+                </h2>
+                <p class="card-text">
+                    <span class="text-muted">Schedules</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6">
+        <div class="card card-sd">
+             <div class="card-body">
+                <h2 class="card-title">
+                    <i class="bi bi-speedometer2"></i> 
+                    <span class="status-global">Status</span>
+                    <span class="status-loader spinner-grow"></span>
+                </h2>
+                <div class="card-text">
+                    <div class="row g-3">
+                        <div class="col">
+                            <span class="text-muted badge-status"><strong>Velero</strong></span>
+                        </div>
+                        <div class="col">    
+                            <span class="text-muted badge-status"><strong>Storage</strong></span>
+                        </div>
+                        <div class="col">
+                            <span class="text-muted badge-status"><strong>Last Sync</strong></span>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col">
+                            <span class="badge bg-secondary bloc-status service-status"></span>
+                        </div>
+                        <div class="col">    
+                            <span class="badge bg-secondary bloc-status storage-status"></span>
+                        </div>
+                        <div class="col">
+                            <span class="badge bg-secondary bloc-status storage-last-sync"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="backup-bloc">
+    <h1 class="mt-5">Backups <button id="new-backup" type="button" class="btn btn-outline-primary" style="float: right" {% if readonly %}disabled="disabled"{% endif %}><i class="bi bi-plus-circle-fill"></i> New backup</button></h1>
+    <hr/>
+    <table id="list-backups" {% if readonly %}data-readonly="true"{% endif %} class="table table-striped align-middle small job-list">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Errors</th>
+                <th>Warnings</th>
+                <th>Created</th>
+                <th>Expires</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody class="table-group-divider">
+
+        </tbody>
+    </table>
+</div>
+
+<div class="restore-bloc">
+    <h1 class="mt-5">Restores</h1>
+    <hr/>
+    <table id="list-restores" {% if readonly %}data-readonly="true"{% endif %} class="table table-striped align-middle job-list">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Errors</th>
+                <th>Warnings</th>
+                <th>Start</th>
+                <th>End</th>
+            </tr>
+        </thead>
+        <tbody class="table-group-divider">
+
+        </tbody>
+    </table>
+</div>
+
+<div class="schedule-bloc">
+    <h1 class="mt-5">Schedules <button id="new-schedule" type="button" class="btn btn-outline-primary" style="float: right" {% if readonly %}disabled="disabled"{% endif %}><i class="bi bi-plus-circle-fill"></i> New schedule</button></h1>
+    <hr/>
+    <table id="list-schedules" {% if readonly %}data-readonly="true"{% endif %} class="table table-striped align-middle job-list">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>TTL</th>
+                <th>Schedule</th>
+                <th>Last backup</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody class="table-group-divider">
+
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="form-modal" tabindex="-1" role="dialog" aria-labelledby="form-modal-label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="form-modal-label">New</h5>
+      </div>
+      <div class="modal-body">
+        
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="result-modal" tabindex="-1" role="dialog" aria-labelledby="result-modal-label" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="result-modal-label">New</h5>
+      </div>
+      <div class="modal-body">
+        
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 
+
+{% block javascript %}
+<script type="text/javascript">window.subpath="{{ path('') }}"</script>
+<script src="{{ path('/js/app.js') }}"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    $('button#new-backup').bind('click', function(){
+        $.ajax({
+               url: "{{ path('/backup/new') }}",
+               beforeSend: function(){
+                $('#form-modal-label').html('New backup');
+               },
+               success: function(response){ 
+                    $('#form-modal .modal-body').html(response);
+                    $('#form-modal').modal('show'); 
+               }
+         });
+    });
+    $('button#new-schedule').bind('click', function(){
+        $.ajax({
+               url: "{{ path('/schedule/new') }}",
+                beforeSend: function(){
+                $('#form-modal-label').html('New schedule');
+               },
+               success: function(response){ 
+                    $('#form-modal .modal-body').html(response);
+                    $('#form-modal').modal('show'); 
+               }
+         });
+    });
+    $('#form-modal button.btn-primary').bind('click', function(){
+        $('#form-modal').find('form').trigger('submit'); 
+    });
+    $('#form-modal button.btn-secondary').bind('click', function(){
+        $('#form-modal').modal('hide');
+    });
+    $('#result-modal button.btn-secondary').bind('click', function(){
+        $('#result-modal').modal('hide');
+    });
+    // switch context
+    $('#contextselect').on('change',function(){
+        window.location.href = '?context='+$(this).val();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" class="h-100" data-bs-theme="dark2">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="msapplication-TileColor" content="#603cba">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="csrf-token" content="{{ csrfToken }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ path('/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ path('/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ path('/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ path('/site.webmanifest') }}">
+    <link rel="mask-icon" href="{{ path('/safari-pinned-tab.svg') }}" color="#031014">
+    <title>My Velero - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ path('/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ path('/css/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ path('/css/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ path('/css/jquery.toast.min.css') }}">
+    <link rel="stylesheet" href="{{ path('/css/jquery-confirm.min.css') }}">
+    <link rel="stylesheet" href="{{ path('/css/select2.min.css') }}" />
+    <link rel="stylesheet" href="{{ path('/css/select2-bootstrap-5-theme.min.css') }}" />
+    <style>
+    main > .container {
+      padding-top: 60px;
+    }
+    .job-list{
+      table-layout: fixed; 
+      word-wrap: break-word;
+      font-size: 0.9rem;
+    }
+    .counter-backups, .counter-restores, .counter-schedules, .status-global{
+      margin-left: 10px;
+    }
+    .backup-bloc table button{
+      margin: 3px;
+      padding: 5px;
+    }
+    .schedule-bloc table button{
+      margin: 2px;
+      padding: 3px;
+    }
+    .backup-bloc table button.btn-link{
+      margin: 0px !important;
+      padding: 0px !important;
+    }
+    </style>
+    {% block css %} {% endblock %} 
+  </head>
+  <body class="d-flex flex-column h-100">
+    {%- block content %}
+    {% include "menu.html.twig" %}
+    
+    <main class="flex-shrink-0">
+        <div class="container">
+            {%- block body %}{% endblock -%}
+        </div>
+    </main>
+
+    <footer class="footer mt-auto py-3 bg-body-tertiary">
+        <div class="container">
+            <span class="text-body-secondary">&copy; My Velero {{ version }} - <a href="https://medinvention.io" target="_blank">medinvention.io</a> [Experimentation - Beta]</span>
+        </div>
+    </footer>
+    {% endblock -%}
+    <script src="{{ path('/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ path('/js/popper.min.js') }}"></script>
+    <script src="{{ path('/js/bootstrap.min.js') }}"></script>
+    <script src="{{ path('/js/jquery.min.js') }}"></script>
+    <script src="{{ path('/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ path('/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ path('/js/moment.js') }}"></script>
+    <script src="{{ path('/js/jquery.blockUI.js') }}"></script>
+    <script src="{{ path('/js/jquery.toast.min.js') }}"></script>
+    <script src="{{ path('/js/jquery-confirm.min.js') }}"></script>
+    <script src="{{ path('/js/select2.min.js') }}"></script>
+    {%- block javascript %}{% endblock -%}
+  </body>
+</html>
